@@ -276,8 +276,8 @@
         </select>
         <select id="kind" aria-label="Kind">
           <option value="">All kinds</option>
-          <option value="hunt_extract">Hunt extract</option>
-          <option value="return">Return</option>
+          <option value="hunt_extract">Topic extract</option>
+          <option value="drop">Drop</option>
         </select>
         <button type="button" class="clear" id="clear">Clear</button>
       </div>
@@ -304,12 +304,6 @@
     let data = { built: "", mentions: [] };
     let filters = { q: "", topic: "", status: "", kind: "" };
     let railBuilt = false;
-
-    // #region agent log
-    function dbg(hypothesisId, location, message, dataObj) {
-      fetch('http://127.0.0.1:7703/ingest/3a44a9b6-5c6e-424d-9cce-5650ed505b41',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0ab6f5'},body:JSON.stringify({sessionId:'0ab6f5',runId:'pre-fix',hypothesisId,location,message,data:dataObj,timestamp:Date.now()})}).catch(()=>{});
-    }
-    // #endregion
 
     function filterKey(f) {
       return [f.q, f.topic, f.status, f.kind].join("\0");
@@ -609,33 +603,19 @@
         rows.length + " of " + data.mentions.length + " links · " +
         topics.size + " topics · built " + (data.built || "?");
       ensureRail();
-      const matchBySlug = new Map();
-      for (const m of rows) {
-        if (!m.topic_slug) continue;
-        matchBySlug.set(m.topic_slug, (matchBySlug.get(m.topic_slug) || 0) + 1);
-      }
       const catalogBySlug = new Map();
       for (const m of data.mentions) {
         if (!m.topic_slug) continue;
         catalogBySlug.set(m.topic_slug, (catalogBySlug.get(m.topic_slug) || 0) + 1);
       }
-      // #region agent log
-      const zeroFromFiltered = [...catalogBySlug.keys()].filter((s) => !(matchBySlug.get(s) > 0)).length;
-      dbg('A', 'index.html:render', 'rail count source', { topic: filters.topic, q: filters.q, status: filters.status, kind: filters.kind, filteredRows: rows.length, matchSlugs: matchBySlug.size, catalogSlugs: catalogBySlug.size, zerosIfUsingFiltered: zeroFromFiltered, activeFilteredCount: filters.topic ? (matchBySlug.get(filters.topic) || 0) : null, activeCatalogCount: filters.topic ? (catalogBySlug.get(filters.topic) || 0) : null, mentionsLen: data.mentions.length });
-      // #endregion
       const active = filters.topic;
       $("rail").querySelectorAll("button[data-slug]").forEach((b) => {
         const slug = b.dataset.slug;
-        const n = slug ? (matchBySlug.get(slug) || 0) : rows.length;
+        const n = slug ? (catalogBySlug.get(slug) || 0) : data.mentions.length;
         const countEl = b.querySelector(".n");
         if (countEl) countEl.textContent = String(n);
         b.setAttribute("aria-current", slug === active ? "true" : "false");
         b.classList.toggle("is-empty", n === 0);
-        // #region agent log
-        if (slug === active || slug === "mythology" || slug === "") {
-          dbg('B', 'index.html:rail-btn', 'rail button written', { slug: slug || 'ALL', n, catalogN: slug ? (catalogBySlug.get(slug) || 0) : data.mentions.length, isEmptyClass: n === 0 });
-        }
-        // #endregion
       });
       const empty = $("empty");
       const list = $("list");
