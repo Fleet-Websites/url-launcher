@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>URL launcher</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: Canvas;
+      --fg: CanvasText;
+      --muted: color-mix(in srgb, CanvasText 55%, Canvas);
+      --line: color-mix(in srgb, CanvasText 18%, Canvas);
+      --accent: color-mix(in srgb, LinkText 80%, CanvasText);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0 auto;
+      max-width: 52rem;
+      padding: 1.25rem 1rem 3rem;
+      font: 16px/1.45 system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+    }
+    h1 { font-size: 1.25rem; font-weight: 650; margin: 0 0 0.25rem; }
+    .meta { color: var(--muted); font-size: 0.9rem; margin-bottom: 1rem; }
+    .controls {
+      display: grid;
+      gap: 0.5rem;
+      grid-template-columns: 1fr;
+      margin-bottom: 1rem;
+    }
+    @media (min-width: 40rem) {
+      .controls { grid-template-columns: 1fr 1fr 1fr; }
+      .controls .q { grid-column: 1 / -1; }
+    }
+    input, select {
+      width: 100%;
+      padding: 0.5rem 0.6rem;
+      font: inherit;
+      color: inherit;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+    }
+    ul { list-style: none; margin: 0; padding: 0; }
+    li {
+      border-top: 1px solid var(--line);
+      padding: 0.7rem 0;
+    }
+    a.row {
+      color: inherit;
+      text-decoration: none;
+      display: block;
+    }
+    a.row:hover .title { text-decoration: underline; }
+    .title { font-weight: 600; }
+    .url {
+      color: var(--accent);
+      font-size: 0.85rem;
+      word-break: break-all;
+    }
+    .tags { color: var(--muted); font-size: 0.8rem; margin-top: 0.2rem; }
+    .empty { color: var(--muted); padding: 1rem 0; }
+    .err { color: #b00020; }
+  </style>
+</head>
+<body>
+  <h1>URL launcher</h1>
+  <p class="meta" id="meta">Loading…</p>
+  <div class="controls">
+    <input class="q" id="q" type="search" placeholder="Search URL, topic, or blurb" autocomplete="off">
+    <select id="topic" aria-label="Topic"><option value="">All topics</option></select>
+    <select id="status" aria-label="Status">
+      <option value="">All statuses</option>
+      <option value="S">S — searched</option>
+      <option value="K">K — claimed</option>
+      <option value="unmarked">Unmarked</option>
+    </select>
+    <select id="kind" aria-label="Kind">
+      <option value="">All kinds</option>
+      <option value="hunt_extract">Hunt extract</option>
+      <option value="return">Return</option>
+    </select>
+  </div>
+  <ul id="list"></ul>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let data = { built: "", mentions: [] };
+
+    function parseHash() {
+      const h = new URLSearchParams(location.hash.replace(/^#/, ""));
+      return { q: h.get("q") || "", topic: h.get("topic") || "", status: h.get("status") || "", kind: h.get("kind") || "" };
+    }
+    function writeHash() {
+      const p = new URLSearchParams();
+      const q = $("q").value.trim();
+      const topic = $("topic").value;
+      const status = $("status").value;
+      const kind = $("kind").value;
+      if (q) p.set("q", q);
+      if (topic) p.set("topic", topic);
+      if (status) p.set("status", status);
+      if (kind) p.set("kind", kind);
+      const next = p.toString();
+      history.replaceState(null, "", next ? "#" + next : location.pathname);
+    }
+    function hay(m) {
+      return [m.url, m.host, m.topic, m.topic_slug, m.blurb, m.source].join(" ").toLowerCase();
+    }
+    function filtered() {
+      const q = $("q").value.trim().toLowerCase();
+      const topic = $("topic").value;
+      const status = $("status").value;
+      const kind = $("kind").value;
+      return data.mentions.filter((m) => {
+        if (q && !hay(m).includes(q)) return false;
+        if (topic && m.topic_slug !== topic) return false;
+        if (kind && m.kind !== kind) return false;
+        if (status === "unmarked" && m.status) return false;
+        if (status && status !== "unmarked" && m.status !== status) return false;
+        return true;
+      });
+    }
+    function statusLabel(s) {
+      if (s === "S") return "S";
+      if (s === "K") return "K";
+      return "unmarked";
+    }
+    function render() {
+      const rows = filtered();
+      $("meta").textContent = "Built " + (data.built || "?") + " · " + rows.length + " of " + data.mentions.length;
+      const list = $("list");
+      list.replaceChildren();
+      if (!rows.length) {
+        const p = document.createElement("p");
+        p.className = "empty";
+        p.textContent = "No matches.";
+        list.appendChild(p);
+        return;
+      }
+      const frag = document.createDocumentFragment();
+      for (const m of rows) {
+        const li = document.createElement("li");
+        const a = document.createElement("a");
+        a.className = "row";
+        a.href = m.url;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        const title = document.createElement("div");
+        title.className = "title";
+        title.textContent = m.blurb || m.url;
+        const url = document.createElement("div");
+        url.className = "url";
+        url.textContent = m.url;
+        const tags = document.createElement("div");
+        tags.className = "tags";
+        tags.textContent = [m.topic || "(no topic)", statusLabel(m.status), m.kind].join(" · ");
+        a.append(title, url, tags);
+        li.appendChild(a);
+        frag.appendChild(li);
+      }
+      list.appendChild(frag);
+    }
+    function applyHash() {
+      const h = parseHash();
+      $("q").value = h.q;
+      $("topic").value = h.topic;
+      $("status").value = h.status;
+      $("kind").value = h.kind;
+      render();
+    }
+
+    fetch("urls.json")
+      .then((r) => {
+        if (!r.ok) throw new Error("urls.json " + r.status);
+        return r.json();
+      })
+      .then((j) => {
+        data = j;
+        const topics = [...new Set(data.mentions.map((m) => m.topic_slug).filter(Boolean))].sort();
+        const sel = $("topic");
+        for (const slug of topics) {
+          const opt = document.createElement("option");
+          opt.value = slug;
+          const sample = data.mentions.find((m) => m.topic_slug === slug);
+          opt.textContent = sample && sample.topic ? sample.topic : slug;
+          sel.appendChild(opt);
+        }
+        ["q", "topic", "status", "kind"].forEach((id) => {
+          $(id).addEventListener("input", () => { writeHash(); render(); });
+        });
+        window.addEventListener("hashchange", applyHash);
+        applyHash();
+      })
+      .catch((err) => {
+        $("meta").innerHTML = '<span class="err">Could not load urls.json. Serve this folder over HTTP (not file://).</span>';
+        console.error(err);
+      });
+  </script>
+</body>
+</html>
