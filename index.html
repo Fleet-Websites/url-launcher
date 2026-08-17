@@ -266,10 +266,16 @@
   <script>
     const $ = (id) => document.getElementById(id);
     let data = { built: "", mentions: [] };
+    let filters = { q: "", topic: "", status: "", kind: "" };
     let railBuilt = false;
 
+    function filterKey(f) {
+      return [f.q, f.topic, f.status, f.kind].join("\0");
+    }
     function parseHash() {
-      const h = new URLSearchParams(location.hash.replace(/^#/, ""));
+      let raw = location.hash.replace(/^#/, "");
+      if (raw.charAt(0) === "?") raw = raw.slice(1);
+      const h = new URLSearchParams(raw);
       return {
         q: h.get("q") || "",
         topic: h.get("topic") || "",
@@ -279,30 +285,51 @@
     }
     function writeHash() {
       const p = new URLSearchParams();
-      const q = $("q").value.trim();
-      const topic = $("topic").value;
-      const status = $("status").value;
-      const kind = $("kind").value;
-      if (q) p.set("q", q);
-      if (topic) p.set("topic", topic);
-      if (status) p.set("status", status);
-      if (kind) p.set("kind", kind);
+      if (filters.q) p.set("q", filters.q);
+      if (filters.topic) p.set("topic", filters.topic);
+      if (filters.status) p.set("status", filters.status);
+      if (filters.kind) p.set("kind", filters.kind);
       const next = p.toString();
-      history.replaceState(null, "", next ? "#" + next : location.pathname);
+      const base = location.pathname + location.search;
+      history.replaceState(null, "", next ? base + "#" + next : base);
+    }
+    function applyFiltersToDom() {
+      $("q").value = filters.q;
+      $("topic").value = filters.topic;
+      if (filters.topic && $("topic").value !== filters.topic) {
+        $("topic").value = "";
+      }
+      $("status").value = filters.status;
+      if (filters.status && $("status").value !== filters.status) {
+        $("status").value = "";
+      }
+      $("kind").value = filters.kind;
+      if (filters.kind && $("kind").value !== filters.kind) {
+        $("kind").value = "";
+      }
+    }
+    function str(v) {
+      return v == null ? "" : String(v);
     }
     function hay(m) {
-      return [m.url, m.host, m.topic, m.topic_slug, m.blurb, m.source].join(" ").toLowerCase();
+      return [m.url, m.host, m.topic, m.topic_slug, m.blurb, m.source]
+        .map(str)
+        .join(" ")
+        .toLowerCase();
+    }
+    function isUnmarked(s) {
+      return s == null || s === "";
     }
     function filtered() {
-      const q = $("q").value.trim().toLowerCase();
-      const topic = $("topic").value;
-      const status = $("status").value;
-      const kind = $("kind").value;
+      const q = filters.q.toLowerCase();
+      const topic = filters.topic;
+      const status = filters.status;
+      const kind = filters.kind;
       return data.mentions.filter((m) => {
         if (q && !hay(m).includes(q)) return false;
         if (topic && m.topic_slug !== topic) return false;
         if (kind && m.kind !== kind) return false;
-        if (status === "unmarked" && m.status) return false;
+        if (status === "unmarked" && !isUnmarked(m.status)) return false;
         if (status && status !== "unmarked" && m.status !== status) return false;
         return true;
       });
@@ -349,20 +376,18 @@
       li.className = "item";
       const href = safeHref(m.url);
       const main = href ? document.createElement("a") : document.createElement("div");
+      main.className = "row";
       if (href) {
-        main.className = "row";
         main.href = href;
         main.target = "_blank";
         main.rel = "noopener noreferrer";
-      } else {
-        main.className = "row";
       }
       const title = document.createElement("div");
       title.className = "title";
-      title.textContent = m.blurb || m.url;
+      title.textContent = m.blurb || m.url || "";
       const url = document.createElement("div");
       url.className = "url";
-      url.textContent = m.url;
+      url.textContent = m.url || "";
       const host = document.createElement("div");
       host.className = "host";
       host.textContent = m.host || "";
@@ -401,7 +426,11 @@
       const all = document.createElement("button");
       all.type = "button";
       all.dataset.slug = "";
-      all.innerHTML = '<span>All topics</span><span class="n" data-count></span>';
+      const allLabel = document.createElement("span");
+      allLabel.textContent = "All topics";
+      const allN = document.createElement("span");
+      allN.className = "n";
+      all.append(allLabel, allN);
       rail.appendChild(all);
       for (const t of topicCatalog()) {
         const b = document.createElement("button");
@@ -411,22 +440,23 @@
         label.textContent = t.topic;
         const n = document.createElement("span");
         n.className = "n";
-        n.dataset.count = "";
         b.append(label, n);
         rail.appendChild(b);
       }
       rail.addEventListener("click", (ev) => {
         const b = ev.target.closest("button[data-slug]");
         if (!b) return;
-        $("topic").value = b.dataset.slug;
+        const next = { q: filters.q, topic: b.dataset.slug, status: filters.status, kind: filters.kind };
+        if (filterKey(next) === filterKey(filters)) return;
+        filters = next;
+        applyFiltersToDom();
         writeHash();
         render();
       });
       railBuilt = true;
     }
     function groupsOf(rows) {
-      const topic = $("topic").value;
-      if (topic) return [{ heading: null, rows }];
+      if (filters.topic) return [{ heading: null, rows }];
       const map = new Map();
       for (const m of rows) {
         const key = m.topic_slug || "_none";
@@ -449,7 +479,7 @@
         if (!m.topic_slug) continue;
         matchBySlug.set(m.topic_slug, (matchBySlug.get(m.topic_slug) || 0) + 1);
       }
-      const active = $("topic").value;
+      const active = filters.topic;
       $("rail").querySelectorAll("button[data-slug]").forEach((b) => {
         const slug = b.dataset.slug;
         const n = slug ? (matchBySlug.get(slug) || 0) : rows.length;
@@ -486,33 +516,44 @@
       list.appendChild(frag);
     }
     function applyHash() {
-      const h = parseHash();
-      $("q").value = h.q;
-      $("topic").value = h.topic;
-      $("status").value = h.status;
-      $("kind").value = h.kind;
+      filters = parseHash();
+      applyFiltersToDom();
       render();
     }
     function clearAll() {
-      $("q").value = "";
-      $("topic").value = "";
-      $("status").value = "";
-      $("kind").value = "";
+      filters = { q: "", topic: "", status: "", kind: "" };
+      applyFiltersToDom();
       writeHash();
       render();
     }
-    function onControl() {
+    function onControl(ev) {
+      const id = ev && ev.target && ev.target.id;
+      const next = {
+        q: filters.q,
+        topic: filters.topic,
+        status: filters.status,
+        kind: filters.kind
+      };
+      if (!id || id === "q") next.q = $("q").value.trim();
+      if (!id || id === "topic") next.topic = $("topic").value;
+      if (!id || id === "status") next.status = $("status").value;
+      if (!id || id === "kind") next.kind = $("kind").value;
+      if (filterKey(next) === filterKey(filters)) return;
+      filters = next;
       writeHash();
       render();
     }
 
-    fetch("urls.json")
+    fetch(new URL("urls.json", document.baseURI))
       .then((r) => {
         if (!r.ok) throw new Error("urls.json " + r.status);
         return r.json();
       })
       .then((j) => {
-        data = j;
+        if (!j || !Array.isArray(j.mentions)) {
+          throw new Error("urls.json missing mentions array");
+        }
+        data = { built: j.built || "", mentions: j.mentions };
         const sel = $("topic");
         for (const t of topicCatalog()) {
           const opt = document.createElement("option");
@@ -536,8 +577,9 @@
           }
           if (e.key !== "Escape") return;
           if (document.activeElement === $("q")) {
-            if ($("q").value) {
-              $("q").value = "";
+            if (filters.q || $("q").value) {
+              filters = { q: "", topic: filters.topic, status: filters.status, kind: filters.kind };
+              applyFiltersToDom();
               writeHash();
               render();
             }
@@ -548,7 +590,10 @@
         applyHash();
       })
       .catch((err) => {
-        $("meta").innerHTML = '<span class="err">Could not load urls.json. Serve this folder over HTTP (not file://).</span>';
+        const span = document.createElement("span");
+        span.className = "err";
+        span.textContent = "Could not load urls.json. Serve this folder over HTTP (not file://).";
+        $("meta").replaceChildren(span);
         console.error(err);
       });
   </script>
