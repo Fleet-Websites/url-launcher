@@ -7,91 +7,275 @@
   <style>
     :root {
       color-scheme: light dark;
-      --bg: Canvas;
-      --fg: CanvasText;
-      --muted: color-mix(in srgb, CanvasText 55%, Canvas);
-      --line: color-mix(in srgb, CanvasText 18%, Canvas);
-      --accent: color-mix(in srgb, LinkText 80%, CanvasText);
+      --bg: #f4efe6;
+      --bg-2: #ebe4d8;
+      --fg: #1c1915;
+      --muted: #6b645a;
+      --line: #d4cbbd;
+      --accent: #1e4d7b;
+      --accent-soft: color-mix(in srgb, var(--accent) 12%, var(--bg));
+      --badge-s: #1e4d7b;
+      --badge-k: #7a4a12;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #161411;
+        --bg-2: #1f1b17;
+        --fg: #efe8dc;
+        --muted: #a3988a;
+        --line: #3a342c;
+        --accent: #8cb4d9;
+        --badge-s: #8cb4d9;
+        --badge-k: #e0b07a;
+      }
     }
     * { box-sizing: border-box; }
+    html, body { margin: 0; }
     body {
-      margin: 0 auto;
-      max-width: 52rem;
-      padding: 1.25rem 1rem 3rem;
-      font: 16px/1.45 system-ui, sans-serif;
+      min-height: 100vh;
+      font: 16px/1.45 ui-sans-serif, system-ui, sans-serif;
       background: var(--bg);
       color: var(--fg);
     }
-    h1 { font-size: 1.25rem; font-weight: 650; margin: 0 0 0.25rem; }
-    .meta { color: var(--muted); font-size: 0.9rem; margin-bottom: 1rem; }
+    a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    .top {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: color-mix(in srgb, var(--bg) 92%, transparent);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+    }
+    .top-inner {
+      max-width: 76rem;
+      margin: 0 auto;
+      padding: 0.85rem 1rem 0.95rem;
+    }
+    .brand {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.5rem 1rem;
+      margin-bottom: 0.7rem;
+    }
+    h1 {
+      font-family: "Iowan Old Style", Palatino, Palatino Linotype, "Book Antiqua", Georgia, serif;
+      font-size: 1.55rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin: 0;
+    }
+    .meta { color: var(--muted); font-size: 0.88rem; margin: 0; }
     .controls {
       display: grid;
-      gap: 0.5rem;
+      gap: 0.45rem;
       grid-template-columns: 1fr;
-      margin-bottom: 1rem;
     }
     @media (min-width: 40rem) {
-      .controls { grid-template-columns: 1fr 1fr 1fr; }
+      .controls {
+        grid-template-columns: 1fr 8.5rem 8.5rem auto;
+      }
       .controls .q { grid-column: 1 / -1; }
+      .controls .topic-wrap { grid-column: 1 / -1; }
     }
-    input, select {
+    @media (min-width: 56rem) {
+      .controls {
+        grid-template-columns: 1fr 8.5rem 8.5rem auto;
+      }
+      .controls .q { grid-column: auto; }
+      .topic-wrap { display: none; }
+    }
+    input, select, .clear {
       width: 100%;
-      padding: 0.5rem 0.6rem;
+      padding: 0.48rem 0.65rem;
       font: inherit;
       color: inherit;
-      background: var(--bg);
+      background: var(--bg-2);
       border: 1px solid var(--line);
+      border-radius: 7px;
+    }
+    .clear {
+      width: auto;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .clear:hover { border-color: var(--accent); color: var(--accent); }
+    .shell {
+      max-width: 76rem;
+      margin: 0 auto;
+      padding: 0.85rem 1rem 3rem;
+      display: grid;
+      gap: 1.25rem;
+    }
+    @media (min-width: 56rem) {
+      .shell { grid-template-columns: 16rem minmax(0, 1fr); }
+    }
+    .rail {
+      display: none;
+    }
+    @media (min-width: 56rem) {
+      .rail {
+        display: block;
+        position: sticky;
+        top: 7.4rem;
+        align-self: start;
+        max-height: calc(100vh - 8rem);
+        overflow: auto;
+        padding-right: 0.4rem;
+      }
+    }
+    .rail h2 {
+      font-size: 0.72rem;
+      font-weight: 650;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 0 0 0.4rem;
+    }
+    .rail button {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.6rem;
+      width: 100%;
+      margin: 0;
+      padding: 0.28rem 0.45rem;
+      border: 0;
       border-radius: 6px;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      font-size: 0.88rem;
+      text-align: left;
+      cursor: pointer;
     }
+    .rail button[aria-current="true"] {
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .rail button.is-empty { color: var(--muted); }
+    .rail .n { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.8rem; }
+    .results { min-width: 0; }
+    .empty { color: var(--muted); padding: 1.2rem 0; margin: 0; }
+    .group { margin: 0 0 1.4rem; }
+    .group h2 {
+      font-family: "Iowan Old Style", Palatino, Palatino Linotype, "Book Antiqua", Georgia, serif;
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 0 0 0.15rem;
+    }
+    .group .count { color: var(--muted); font-size: 0.8rem; font-weight: 400; margin: 0 0 0.35rem; }
     ul { list-style: none; margin: 0; padding: 0; }
-    li {
+    li.item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.55rem;
+      align-items: start;
       border-top: 1px solid var(--line);
-      padding: 0.7rem 0;
+      padding: 0.65rem 0.35rem 0.65rem 0.15rem;
     }
+    li.item:hover { background: var(--accent-soft); }
     a.row {
       color: inherit;
       text-decoration: none;
-      display: block;
+      min-width: 0;
     }
     a.row:hover .title { text-decoration: underline; }
-    .title { font-weight: 600; }
+    .title { font-weight: 620; }
     .url {
       color: var(--accent);
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       word-break: break-all;
+      margin-top: 0.12rem;
     }
-    .tags { color: var(--muted); font-size: 0.8rem; margin-top: 0.2rem; }
-    .empty { color: var(--muted); padding: 1rem 0; }
-    .err { color: #b00020; }
+    .host { color: var(--muted); font-size: 0.78rem; }
+    .side {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.35rem;
+      padding-top: 0.1rem;
+    }
+    .badge {
+      display: inline-block;
+      min-width: 1.35rem;
+      padding: 0.08rem 0.38rem;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-align: center;
+      border: 1px solid var(--line);
+      color: var(--muted);
+    }
+    .badge.S { color: var(--badge-s); border-color: color-mix(in srgb, var(--badge-s) 45%, var(--line)); }
+    .badge.K { color: var(--badge-k); border-color: color-mix(in srgb, var(--badge-k) 45%, var(--line)); }
+    .copy {
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.75rem;
+      padding: 0.18rem 0.45rem;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      background: var(--bg-2);
+      color: var(--muted);
+    }
+    .copy:hover, .copy.is-done { color: var(--accent); border-color: var(--accent); }
+    .kind { color: var(--muted); font-size: 0.72rem; }
+    .err { color: #9b1c1c; }
   </style>
 </head>
 <body>
-  <h1>URL launcher</h1>
-  <p class="meta" id="meta">Loading…</p>
-  <div class="controls">
-    <input class="q" id="q" type="search" placeholder="Search URL, topic, or blurb" autocomplete="off">
-    <select id="topic" aria-label="Topic"><option value="">All topics</option></select>
-    <select id="status" aria-label="Status">
-      <option value="">All statuses</option>
-      <option value="S">S — searched</option>
-      <option value="K">K — claimed</option>
-      <option value="unmarked">Unmarked</option>
-    </select>
-    <select id="kind" aria-label="Kind">
-      <option value="">All kinds</option>
-      <option value="hunt_extract">Hunt extract</option>
-      <option value="return">Return</option>
-    </select>
+  <header class="top">
+    <div class="top-inner">
+      <div class="brand">
+        <h1>URL launcher</h1>
+        <p class="meta" id="meta">Loading…</p>
+      </div>
+      <div class="controls">
+        <input class="q" id="q" type="search" placeholder="Search URL, host, topic, or blurb  ( / )" autocomplete="off">
+        <div class="topic-wrap">
+          <select id="topic" aria-label="Topic"><option value="">All topics</option></select>
+        </div>
+        <select id="status" aria-label="Status">
+          <option value="">All statuses</option>
+          <option value="S">S — searched</option>
+          <option value="K">K — claimed</option>
+          <option value="unmarked">Unmarked</option>
+        </select>
+        <select id="kind" aria-label="Kind">
+          <option value="">All kinds</option>
+          <option value="hunt_extract">Hunt extract</option>
+          <option value="return">Return</option>
+        </select>
+        <button type="button" class="clear" id="clear">Clear</button>
+      </div>
+    </div>
+  </header>
+  <div class="shell">
+    <nav class="rail" id="rail" aria-label="Topics"></nav>
+    <div class="results">
+      <p class="empty" id="empty" hidden>No matches.</p>
+      <div id="list"></div>
+    </div>
   </div>
-  <ul id="list"></ul>
 
   <script>
     const $ = (id) => document.getElementById(id);
     let data = { built: "", mentions: [] };
+    let railBuilt = false;
 
     function parseHash() {
       const h = new URLSearchParams(location.hash.replace(/^#/, ""));
-      return { q: h.get("q") || "", topic: h.get("topic") || "", status: h.get("status") || "", kind: h.get("kind") || "" };
+      return {
+        q: h.get("q") || "",
+        topic: h.get("topic") || "",
+        status: h.get("status") || "",
+        kind: h.get("kind") || ""
+      };
     }
     function writeHash() {
       const p = new URLSearchParams();
@@ -123,43 +307,181 @@
         return true;
       });
     }
-    function statusLabel(s) {
-      if (s === "S") return "S";
-      if (s === "K") return "K";
-      return "unmarked";
+    function safeHref(u) {
+      try {
+        const x = new URL(u);
+        if (x.protocol === "http:" || x.protocol === "https:") return u;
+      } catch (err) {}
+      return "";
+    }
+    function statusBadge(s) {
+      const span = document.createElement("span");
+      span.className = "badge" + (s === "S" || s === "K" ? " " + s : "");
+      span.textContent = s === "S" || s === "K" ? s : "·";
+      span.title = s === "S" ? "Searched" : s === "K" ? "Claimed" : "Unmarked";
+      return span;
+    }
+    function copyBtn(url) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "copy";
+      b.textContent = "Copy";
+      b.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const done = () => {
+          b.textContent = "Copied";
+          b.classList.add("is-done");
+          setTimeout(() => { b.textContent = "Copy"; b.classList.remove("is-done"); }, 1200);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(done).catch(() => {
+            window.prompt("Copy URL", url);
+          });
+        } else {
+          window.prompt("Copy URL", url);
+        }
+      });
+      return b;
+    }
+    function rowEl(m) {
+      const li = document.createElement("li");
+      li.className = "item";
+      const href = safeHref(m.url);
+      const main = href ? document.createElement("a") : document.createElement("div");
+      if (href) {
+        main.className = "row";
+        main.href = href;
+        main.target = "_blank";
+        main.rel = "noopener noreferrer";
+      } else {
+        main.className = "row";
+      }
+      const title = document.createElement("div");
+      title.className = "title";
+      title.textContent = m.blurb || m.url;
+      const url = document.createElement("div");
+      url.className = "url";
+      url.textContent = m.url;
+      const host = document.createElement("div");
+      host.className = "host";
+      host.textContent = m.host || "";
+      main.append(title, url, host);
+      const side = document.createElement("div");
+      side.className = "side";
+      side.appendChild(statusBadge(m.status));
+      if (href) side.appendChild(copyBtn(href));
+      if (m.kind && m.kind !== "hunt_extract") {
+        const k = document.createElement("span");
+        k.className = "kind";
+        k.textContent = m.kind;
+        side.appendChild(k);
+      }
+      li.append(main, side);
+      return li;
+    }
+    function topicCatalog() {
+      const map = new Map();
+      for (const m of data.mentions) {
+        if (!m.topic_slug) continue;
+        if (!map.has(m.topic_slug)) {
+          map.set(m.topic_slug, { slug: m.topic_slug, topic: m.topic || m.topic_slug, n: 0 });
+        }
+        map.get(m.topic_slug).n += 1;
+      }
+      return [...map.values()].sort((a, b) => a.topic.localeCompare(b.topic));
+    }
+    function ensureRail() {
+      if (railBuilt) return;
+      const rail = $("rail");
+      rail.replaceChildren();
+      const h = document.createElement("h2");
+      h.textContent = "Topics";
+      rail.appendChild(h);
+      const all = document.createElement("button");
+      all.type = "button";
+      all.dataset.slug = "";
+      all.innerHTML = '<span>All topics</span><span class="n" data-count></span>';
+      rail.appendChild(all);
+      for (const t of topicCatalog()) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.dataset.slug = t.slug;
+        const label = document.createElement("span");
+        label.textContent = t.topic;
+        const n = document.createElement("span");
+        n.className = "n";
+        n.dataset.count = "";
+        b.append(label, n);
+        rail.appendChild(b);
+      }
+      rail.addEventListener("click", (ev) => {
+        const b = ev.target.closest("button[data-slug]");
+        if (!b) return;
+        $("topic").value = b.dataset.slug;
+        writeHash();
+        render();
+      });
+      railBuilt = true;
+    }
+    function groupsOf(rows) {
+      const topic = $("topic").value;
+      if (topic) return [{ heading: null, rows }];
+      const map = new Map();
+      for (const m of rows) {
+        const key = m.topic_slug || "_none";
+        if (!map.has(key)) {
+          map.set(key, { heading: m.topic || "(no topic)", rows: [] });
+        }
+        map.get(key).rows.push(m);
+      }
+      return [...map.values()].sort((a, b) => a.heading.localeCompare(b.heading));
     }
     function render() {
       const rows = filtered();
-      $("meta").textContent = "Built " + (data.built || "?") + " · " + rows.length + " of " + data.mentions.length;
+      const topics = new Set(data.mentions.map((m) => m.topic_slug).filter(Boolean));
+      $("meta").textContent =
+        rows.length + " of " + data.mentions.length + " links · " +
+        topics.size + " topics · built " + (data.built || "?");
+      ensureRail();
+      const matchBySlug = new Map();
+      for (const m of rows) {
+        if (!m.topic_slug) continue;
+        matchBySlug.set(m.topic_slug, (matchBySlug.get(m.topic_slug) || 0) + 1);
+      }
+      const active = $("topic").value;
+      $("rail").querySelectorAll("button[data-slug]").forEach((b) => {
+        const slug = b.dataset.slug;
+        const n = slug ? (matchBySlug.get(slug) || 0) : rows.length;
+        const countEl = b.querySelector(".n");
+        if (countEl) countEl.textContent = String(n);
+        b.setAttribute("aria-current", slug === active ? "true" : "false");
+        b.classList.toggle("is-empty", n === 0);
+      });
+      const empty = $("empty");
       const list = $("list");
       list.replaceChildren();
       if (!rows.length) {
-        const p = document.createElement("p");
-        p.className = "empty";
-        p.textContent = "No matches.";
-        list.appendChild(p);
+        empty.hidden = false;
         return;
       }
+      empty.hidden = true;
       const frag = document.createDocumentFragment();
-      for (const m of rows) {
-        const li = document.createElement("li");
-        const a = document.createElement("a");
-        a.className = "row";
-        a.href = m.url;
-        a.target = "_blank";
-        a.rel = "noopener noreferrer";
-        const title = document.createElement("div");
-        title.className = "title";
-        title.textContent = m.blurb || m.url;
-        const url = document.createElement("div");
-        url.className = "url";
-        url.textContent = m.url;
-        const tags = document.createElement("div");
-        tags.className = "tags";
-        tags.textContent = [m.topic || "(no topic)", statusLabel(m.status), m.kind].join(" · ");
-        a.append(title, url, tags);
-        li.appendChild(a);
-        frag.appendChild(li);
+      for (const g of groupsOf(rows)) {
+        const wrap = document.createElement("section");
+        wrap.className = "group";
+        if (g.heading) {
+          const h2 = document.createElement("h2");
+          h2.textContent = g.heading;
+          const c = document.createElement("p");
+          c.className = "count";
+          c.textContent = g.rows.length + (g.rows.length === 1 ? " link" : " links");
+          wrap.append(h2, c);
+        }
+        const ul = document.createElement("ul");
+        for (const m of g.rows) ul.appendChild(rowEl(m));
+        wrap.appendChild(ul);
+        frag.appendChild(wrap);
       }
       list.appendChild(frag);
     }
@@ -171,6 +493,18 @@
       $("kind").value = h.kind;
       render();
     }
+    function clearAll() {
+      $("q").value = "";
+      $("topic").value = "";
+      $("status").value = "";
+      $("kind").value = "";
+      writeHash();
+      render();
+    }
+    function onControl() {
+      writeHash();
+      render();
+    }
 
     fetch("urls.json")
       .then((r) => {
@@ -179,19 +513,38 @@
       })
       .then((j) => {
         data = j;
-        const topics = [...new Set(data.mentions.map((m) => m.topic_slug).filter(Boolean))].sort();
         const sel = $("topic");
-        for (const slug of topics) {
+        for (const t of topicCatalog()) {
           const opt = document.createElement("option");
-          opt.value = slug;
-          const sample = data.mentions.find((m) => m.topic_slug === slug);
-          opt.textContent = sample && sample.topic ? sample.topic : slug;
+          opt.value = t.slug;
+          opt.textContent = t.topic;
           sel.appendChild(opt);
         }
         ["q", "topic", "status", "kind"].forEach((id) => {
-          $(id).addEventListener("input", () => { writeHash(); render(); });
+          $(id).addEventListener("input", onControl);
+          $(id).addEventListener("change", onControl);
         });
+        $("clear").addEventListener("click", clearAll);
         window.addEventListener("hashchange", applyHash);
+        document.addEventListener("keydown", (e) => {
+          const tag = (document.activeElement && document.activeElement.tagName) || "";
+          const typing = tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA";
+          if (e.key === "/" && !typing && !e.metaKey && !e.ctrlKey && !e.altKey) {
+            e.preventDefault();
+            $("q").focus();
+            return;
+          }
+          if (e.key !== "Escape") return;
+          if (document.activeElement === $("q")) {
+            if ($("q").value) {
+              $("q").value = "";
+              writeHash();
+              render();
+            }
+            return;
+          }
+          clearAll();
+        });
         applyHash();
       })
       .catch((err) => {
