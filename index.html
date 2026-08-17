@@ -224,6 +224,35 @@
       color: var(--muted);
     }
     .copy:hover, .copy.is-done { color: var(--accent); border-color: var(--accent); }
+    .menu {
+      position: fixed;
+      z-index: 30;
+      min-width: 8.75rem;
+      padding: 0.22rem;
+      background: var(--bg);
+      color: var(--fg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 10px 28px color-mix(in srgb, var(--fg) 16%, transparent);
+    }
+    .menu[hidden] { display: none; }
+    .menu button {
+      display: block;
+      width: 100%;
+      margin: 0;
+      padding: 0.38rem 0.55rem;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: inherit;
+      font: 600 0.82rem/1.25 ui-sans-serif, system-ui, sans-serif;
+      text-align: left;
+      cursor: pointer;
+    }
+    .menu button:hover, .menu button:focus-visible {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
     .err { color: #9b1c1c; }
   </style>
 </head>
@@ -265,6 +294,9 @@
     <p class="tip-blurb" id="tip-blurb"></p>
     <p class="tip-meta" id="tip-meta"></p>
     <button type="button" class="copy" id="tip-copy">Copy</button>
+  </div>
+  <div class="menu" id="menu" hidden>
+    <button type="button" id="menu-copy">Copy URL</button>
   </div>
 
   <script>
@@ -373,7 +405,17 @@
       }
       return el;
     }
+    function copyPlainUrl(url, onDone) {
+      if (!url) return;
+      const fail = () => window.prompt("Copy URL", url);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(onDone).catch(fail);
+      } else {
+        fail();
+      }
+    }
     let hideTip = function () {};
+    let hideMenu = function () {};
     function bindTip() {
       const tip = $("tip");
       const blurbEl = $("tip-blurb");
@@ -435,18 +477,62 @@
         ev.preventDefault();
         ev.stopPropagation();
         if (!currentUrl) return;
-        const done = () => {
+        copyPlainUrl(currentUrl, () => {
           copy.textContent = "Copied";
           copy.classList.add("is-done");
-        };
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(currentUrl).then(done).catch(() => {
-            window.prompt("Copy URL", currentUrl);
-          });
-        } else {
-          window.prompt("Copy URL", currentUrl);
-        }
+        });
       });
+    }
+    function bindMenu() {
+      const menu = $("menu");
+      const item = $("menu-copy");
+      let currentUrl = "";
+      function hide() {
+        menu.hidden = true;
+        currentUrl = "";
+        item.textContent = "Copy URL";
+      }
+      hideMenu = hide;
+      function show(x, y, url) {
+        hideTip();
+        currentUrl = url;
+        item.textContent = "Copy URL";
+        menu.hidden = false;
+        menu.style.left = x + "px";
+        menu.style.top = y + "px";
+        const r = menu.getBoundingClientRect();
+        let left = x;
+        let top = y;
+        if (left + r.width > window.innerWidth - 8) left = window.innerWidth - r.width - 8;
+        if (top + r.height > window.innerHeight - 8) top = window.innerHeight - r.height - 8;
+        if (left < 8) left = 8;
+        if (top < 8) top = 8;
+        menu.style.left = left + "px";
+        menu.style.top = top + "px";
+      }
+      $("list").addEventListener("contextmenu", (ev) => {
+        const el = ev.target.closest(".tile");
+        if (!el || !$("list").contains(el)) return;
+        const url = el.dataset.url || "";
+        if (!url) return;
+        ev.preventDefault();
+        show(ev.clientX, ev.clientY, url);
+      });
+      item.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (!currentUrl) return;
+        copyPlainUrl(currentUrl, () => {
+          item.textContent = "Copied";
+          window.setTimeout(hide, 450);
+        });
+      });
+      document.addEventListener("pointerdown", (ev) => {
+        if (menu.hidden) return;
+        if (menu.contains(ev.target)) return;
+        hide();
+      });
+      window.addEventListener("scroll", hide, true);
     }
     function topicCatalog() {
       const map = new Map();
@@ -534,6 +620,7 @@
       const empty = $("empty");
       const list = $("list");
       hideTip();
+      hideMenu();
       list.replaceChildren();
       if (!rows.length) {
         empty.hidden = false;
@@ -613,6 +700,7 @@
         $("clear").addEventListener("click", clearAll);
         window.addEventListener("hashchange", applyHash);
         bindTip();
+        bindMenu();
         document.addEventListener("keydown", (e) => {
           const tag = (document.activeElement && document.activeElement.tagName) || "";
           const typing = tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA";
@@ -624,6 +712,10 @@
           if (e.key !== "Escape") return;
           if (!$("tip").hidden) {
             hideTip();
+            return;
+          }
+          if (!$("menu").hidden) {
+            hideMenu();
             return;
           }
           if (document.activeElement === $("q")) {
