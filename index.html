@@ -160,71 +160,70 @@
     .rail .n { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.8rem; }
     .results { min-width: 0; }
     .empty { color: var(--muted); padding: 1.2rem 0; margin: 0; }
-    .group { margin: 0 0 1.4rem; }
+    .group { margin: 0 0 1.15rem; }
     .group h2 {
       font-family: "Iowan Old Style", Palatino, Palatino Linotype, "Book Antiqua", Georgia, serif;
-      font-size: 1.15rem;
+      font-size: 1.05rem;
       font-weight: 600;
-      margin: 0 0 0.15rem;
+      margin: 0 0 0.12rem;
     }
-    .group .count { color: var(--muted); font-size: 0.8rem; font-weight: 400; margin: 0 0 0.35rem; }
-    ul { list-style: none; margin: 0; padding: 0; }
-    li.item {
+    .group .count { color: var(--muted); font-size: 0.75rem; font-weight: 400; margin: 0 0 0.4rem; }
+    .grid {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 0.55rem;
-      align-items: start;
-      border-top: 1px solid var(--line);
-      padding: 0.65rem 0.35rem 0.65rem 0.15rem;
-    }
-    li.item:hover { background: var(--accent-soft); }
-    a.row {
-      color: inherit;
-      text-decoration: none;
-      min-width: 0;
-    }
-    a.row:hover .title { text-decoration: underline; }
-    .title { font-weight: 620; }
-    .url {
-      color: var(--accent);
-      font-size: 0.82rem;
-      word-break: break-all;
-      margin-top: 0.12rem;
-    }
-    .host { color: var(--muted); font-size: 0.78rem; }
-    .side {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
+      grid-template-columns: repeat(auto-fill, minmax(8.75rem, 1fr));
       gap: 0.35rem;
-      padding-top: 0.1rem;
     }
-    .badge {
-      display: inline-block;
-      min-width: 1.35rem;
-      padding: 0.08rem 0.38rem;
-      border-radius: 999px;
-      font-size: 0.68rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-align: center;
+    .tile {
+      display: block;
+      min-width: 0;
+      padding: 0.32rem 0.45rem 0.32rem 0.5rem;
       border: 1px solid var(--line);
-      color: var(--muted);
+      border-left-width: 2px;
+      border-radius: 6px;
+      background: var(--bg-2);
+      color: inherit;
+      font: 600 0.78rem/1.25 ui-sans-serif, system-ui, sans-serif;
+      text-align: left;
+      text-decoration: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
     }
-    .badge.S { color: var(--badge-s); border-color: color-mix(in srgb, var(--badge-s) 45%, var(--line)); }
-    .badge.K { color: var(--badge-k); border-color: color-mix(in srgb, var(--badge-k) 45%, var(--line)); }
+    .tile.S { border-left-color: var(--badge-s); }
+    .tile.K { border-left-color: var(--badge-k); }
+    .tile:hover, .tile:focus-visible {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .tip {
+      position: fixed;
+      z-index: 20;
+      max-width: min(22rem, calc(100vw - 1.5rem));
+      padding: 0.65rem 0.75rem 0.7rem;
+      background: var(--bg);
+      color: var(--fg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 10px 28px color-mix(in srgb, var(--fg) 16%, transparent);
+      font-size: 0.84rem;
+      line-height: 1.4;
+    }
+    .tip[hidden] { display: none; }
+    .tip-blurb { margin: 0 0 0.35rem; }
+    .tip-meta { color: var(--muted); font-size: 0.75rem; margin: 0 0 0.45rem; word-break: break-all; }
     .copy {
       cursor: pointer;
       font: inherit;
       font-size: 0.75rem;
-      padding: 0.18rem 0.45rem;
+      padding: 0.18rem 0.5rem;
       border-radius: 6px;
       border: 1px solid var(--line);
       background: var(--bg-2);
       color: var(--muted);
     }
     .copy:hover, .copy.is-done { color: var(--accent); border-color: var(--accent); }
-    .kind { color: var(--muted); font-size: 0.72rem; }
     .err { color: #9b1c1c; }
   </style>
 </head>
@@ -261,6 +260,11 @@
       <p class="empty" id="empty" hidden>No matches.</p>
       <div id="list"></div>
     </div>
+  </div>
+  <div class="tip" id="tip" hidden>
+    <p class="tip-blurb" id="tip-blurb"></p>
+    <p class="tip-meta" id="tip-meta"></p>
+    <button type="button" class="copy" id="tip-copy">Copy</button>
   </div>
 
   <script>
@@ -341,69 +345,108 @@
       } catch (err) {}
       return "";
     }
-    function statusBadge(s) {
-      const span = document.createElement("span");
-      span.className = "badge" + (s === "S" || s === "K" ? " " + s : "");
-      span.textContent = s === "S" || s === "K" ? s : "·";
-      span.title = s === "S" ? "Searched" : s === "K" ? "Claimed" : "Unmarked";
-      return span;
+    function siteName(m) {
+      const b = str(m.blurb).trim();
+      const cut = b.split(/\s+[—–-]\s+/)[0].trim();
+      if (cut.length >= 2 && cut.length <= 32 && !/^https?:/i.test(cut)) return cut;
+      return str(m.host).replace(/^www\./, "") || str(m.url);
     }
-    function copyBtn(url) {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "copy";
-      b.textContent = "Copy";
-      b.addEventListener("click", (ev) => {
+    function statusLabel(s) {
+      if (s === "S") return "S — searched";
+      if (s === "K") return "K — claimed";
+      return "unmarked";
+    }
+    function tileEl(m) {
+      const href = safeHref(m.url);
+      const el = href ? document.createElement("a") : document.createElement("span");
+      el.className = "tile" + (m.status === "S" || m.status === "K" ? " " + m.status : "");
+      el.textContent = siteName(m);
+      const blurb = str(m.blurb) || str(m.url);
+      el.title = blurb;
+      el.dataset.blurb = blurb;
+      el.dataset.url = href;
+      el.dataset.status = m.status === "S" || m.status === "K" ? m.status : "unmarked";
+      if (href) {
+        el.href = href;
+        el.target = "_blank";
+        el.rel = "noopener noreferrer";
+      }
+      return el;
+    }
+    let hideTip = function () {};
+    function bindTip() {
+      const tip = $("tip");
+      const blurbEl = $("tip-blurb");
+      const metaEl = $("tip-meta");
+      const copy = $("tip-copy");
+      let currentUrl = "";
+      let hideTimer = 0;
+      function hide() {
+        window.clearTimeout(hideTimer);
+        tip.hidden = true;
+        currentUrl = "";
+        copy.textContent = "Copy";
+        copy.classList.remove("is-done");
+      }
+      hideTip = hide;
+      function show(el) {
+        window.clearTimeout(hideTimer);
+        currentUrl = el.dataset.url || "";
+        blurbEl.textContent = el.dataset.blurb || "";
+        metaEl.textContent = statusLabel(el.dataset.status) + (currentUrl ? " · " + currentUrl : "");
+        copy.hidden = !currentUrl;
+        copy.textContent = "Copy";
+        copy.classList.remove("is-done");
+        tip.hidden = false;
+        const r = el.getBoundingClientRect();
+        const tw = tip.offsetWidth;
+        const th = tip.offsetHeight;
+        let left = r.left;
+        if (left + tw > window.innerWidth - 8) left = window.innerWidth - tw - 8;
+        if (left < 8) left = 8;
+        let top = r.bottom + 6;
+        if (top + th > window.innerHeight - 8) top = Math.max(8, r.top - th - 6);
+        tip.style.left = left + "px";
+        tip.style.top = top + "px";
+      }
+      function scheduleHide() {
+        window.clearTimeout(hideTimer);
+        hideTimer = window.setTimeout(() => {
+          if (tip.matches(":hover")) return;
+          const active = document.activeElement;
+          if (active && active.classList && active.classList.contains("tile")) return;
+          hide();
+        }, 80);
+      }
+      $("list").addEventListener("pointerover", (ev) => {
+        const el = ev.target.closest(".tile");
+        if (!el || !$("list").contains(el)) return;
+        show(el);
+      });
+      $("list").addEventListener("pointerleave", scheduleHide);
+      $("list").addEventListener("focusin", (ev) => {
+        const el = ev.target.closest(".tile");
+        if (el) show(el);
+      });
+      $("list").addEventListener("focusout", scheduleHide);
+      tip.addEventListener("pointerenter", () => window.clearTimeout(hideTimer));
+      tip.addEventListener("pointerleave", scheduleHide);
+      copy.addEventListener("click", (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
+        if (!currentUrl) return;
         const done = () => {
-          b.textContent = "Copied";
-          b.classList.add("is-done");
-          setTimeout(() => { b.textContent = "Copy"; b.classList.remove("is-done"); }, 1200);
+          copy.textContent = "Copied";
+          copy.classList.add("is-done");
         };
         if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(url).then(done).catch(() => {
-            window.prompt("Copy URL", url);
+          navigator.clipboard.writeText(currentUrl).then(done).catch(() => {
+            window.prompt("Copy URL", currentUrl);
           });
         } else {
-          window.prompt("Copy URL", url);
+          window.prompt("Copy URL", currentUrl);
         }
       });
-      return b;
-    }
-    function rowEl(m) {
-      const li = document.createElement("li");
-      li.className = "item";
-      const href = safeHref(m.url);
-      const main = href ? document.createElement("a") : document.createElement("div");
-      main.className = "row";
-      if (href) {
-        main.href = href;
-        main.target = "_blank";
-        main.rel = "noopener noreferrer";
-      }
-      const title = document.createElement("div");
-      title.className = "title";
-      title.textContent = m.blurb || m.url || "";
-      const url = document.createElement("div");
-      url.className = "url";
-      url.textContent = m.url || "";
-      const host = document.createElement("div");
-      host.className = "host";
-      host.textContent = m.host || "";
-      main.append(title, url, host);
-      const side = document.createElement("div");
-      side.className = "side";
-      side.appendChild(statusBadge(m.status));
-      if (href) side.appendChild(copyBtn(href));
-      if (m.kind && m.kind !== "hunt_extract") {
-        const k = document.createElement("span");
-        k.className = "kind";
-        k.textContent = m.kind;
-        side.appendChild(k);
-      }
-      li.append(main, side);
-      return li;
     }
     function topicCatalog() {
       const map = new Map();
@@ -490,6 +533,7 @@
       });
       const empty = $("empty");
       const list = $("list");
+      hideTip();
       list.replaceChildren();
       if (!rows.length) {
         empty.hidden = false;
@@ -508,9 +552,10 @@
           c.textContent = g.rows.length + (g.rows.length === 1 ? " link" : " links");
           wrap.append(h2, c);
         }
-        const ul = document.createElement("ul");
-        for (const m of g.rows) ul.appendChild(rowEl(m));
-        wrap.appendChild(ul);
+        const grid = document.createElement("div");
+        grid.className = "grid";
+        for (const m of g.rows) grid.appendChild(tileEl(m));
+        wrap.appendChild(grid);
         frag.appendChild(wrap);
       }
       list.appendChild(frag);
@@ -567,6 +612,7 @@
         });
         $("clear").addEventListener("click", clearAll);
         window.addEventListener("hashchange", applyHash);
+        bindTip();
         document.addEventListener("keydown", (e) => {
           const tag = (document.activeElement && document.activeElement.tagName) || "";
           const typing = tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA";
@@ -576,6 +622,10 @@
             return;
           }
           if (e.key !== "Escape") return;
+          if (!$("tip").hidden) {
+            hideTip();
+            return;
+          }
           if (document.activeElement === $("q")) {
             if (filters.q || $("q").value) {
               filters = { q: "", topic: filters.topic, status: filters.status, kind: filters.kind };
