@@ -1,0 +1,29 @@
+Topic: Ai Art Styles Image Prompts
+On: 2026-08-23
+
+https://www.kapwing.com/resources/how-to-replicate-popular-chatgpt-image-styles/ 16 popular ChatGPT image styles (Studio Ghibli, Pixar, Disney etc.) with ready-to-use prompts; pointer Research/topics/ai-art-styles-image-prompts/
+https://imaginewithrashid.com/31-art-styles-for-chatgpt-image-generation/ 31 art styles for ChatGPT image generation, each with example prompt and sample image; pointer Research/topics/ai-art-styles-image-prompts/
+https://upsampler.com/blog/best-chatgpt-image-generation-prompts ChatGPT-4o image prompts organised by style category (art styles, animation, character, cyberpunk, fantasy); pointer Research/topics/ai-art-styles-image-prompts/
+https://ai-art-tutorials.com/best-chatgpt-ai-image-prompts-and-art-styles-22 Hub cataloguing 1,800+ ChatGPT/DALL·E prompts and art styles; most free, some Patreon-gated; pointer Research/topics/ai-art-styles-image-prompts/
+https://ai-art-tutorials.com/list-of-artist-inspired-styles-for-chatgpt-ai-image-prompts-25 170+ artist-inspired styles for ChatGPT image prompts; part free, part Patreon-gated; pointer Research/topics/ai-art-styles-image-prompts/
+https://www.youtube.com/watch?v=XAudCD4NgkI CLAIMED (fetch blocked 429; title via two mirrors): video "80 Art Styles You Can Generate with ChatGPT-4o (AI Image Prompts)"; pointer Research/topics/ai-art-styles-image-prompts/
+https://gptprompts.ai/ai-image-styles 50+ styles in 8 categories, copy-paste prompts tuned to the 2026 model lineup incl. DALL·E 3 inside ChatGPT; pointer Research/topics/ai-art-styles-image-prompts/
+https://myaiforce.com/dalle-3-art-styles/ 18 DALL·E 3 art styles, traditional to digital, with prompts; pointer Research/topics/ai-art-styles-image-prompts/
+https://blog.mlq.ai/dalle-prompts/ 20+ DALL·E 3 prompts and tips in six categories (in-image text, photography, fashion, comics, gaming, artistic reimaginings); pointer Research/topics/ai-art-styles-image-prompts/
+https://www.promptingguide.ai/guides/4o-image-generation 4o image-generation prompting strategies: lighting, composition, style, aspect ratios, use cases; pointer Research/topics/ai-art-styles-image-prompts/
+https://developers.openai.com/cookbook/examples/multimodal/image-gen-models-prompting-guide Official OpenAI prompting guide for its image-generation models: structure, specificity, composition, constraints, editing; pointer Research/topics/ai-art-styles-image-prompts/
+https://dallery.gallery/the-dalle-2-prompt-book/ Free 82-page DALL·E Prompt Book: aesthetics, emotional language, photography, film styles, illustration styles, art history, 3D, prompt engineering; pointer Research/topics/ai-art-styles-image-prompts/
+https://dev.to/netsi1964/some-tips-on-styling-in-creating-images-using-chatgpt-34bo Techniques for controlling style in ChatGPT/DALL·E 3: generation IDs, iterative dialogue, reference-image style analysis; pointer Research/topics/ai-art-styles-image-prompts/
+https://www.lewis-lin.com/posts/the-ultimate-prompting-cheat-sheet-for-ai-image-creation Prompting cheat sheet in five categories: style and mood, composition and framing, lighting, technical specs, subject detail; pointer Research/topics/ai-art-styles-image-prompts/
+https://zeroskillai.com/ai-art-style-cheat-sheet/ 100+ copy-paste style modifiers: lighting, camera angles, art mediums, render engines; pointer Research/topics/ai-art-styles-image-prompts/
+https://zapier.com/blog/ai-art-styles/ 70+ AI art styles in five categories (medium, material, photography, lighting, colour) with visual examples; pointer Research/topics/ai-art-styles-image-prompts/
+https://www.neolemon.com/blog/list-of-art-styles-for-ai-prompts/ 180+ style prompts across cartoon, children's book, anime/manga, comics, classic movements, traditional media, retro, digital, character sheets; pointer Research/topics/ai-art-styles-image-prompts/
+https://www.artstyles.pro/ 103 art styles in 8 categories with example artwork, plain-English definitions, copy-ready prompt phrases; pointer Research/topics/ai-art-styles-image-prompts/
+https://zsky.ai/ai-art-styles-encyclopedia 100+ AI art styles encyclopedia (2026) with visual characteristics and copy-paste prompts; promotes the site's own generator; pointer Research/topics/ai-art-styles-image-prompts/
+https://www.imagetoprompt.dev/inspiration/art-styles/ 50 art styles in six categories with descriptions and example prompts; page free, platform freemium; pointer Research/topics/ai-art-styles-image-prompts/
+https://synthsenseai.com/ultimate-cheat-sheet-for-image-generation-prompts-part-1-art-movements-illustration-styles/ Cheat sheet of art movements, illustration techniques, colour theory for image prompts; pointer Research/topics/ai-art-styles-image-prompts/
+https://promptwritingstudio.com/ai-prompt-generator/art-styles-for-ai-prompts 50+ art styles as text descriptions with ready-to-copy prompts (no visual previews); pointer Research/topics/ai-art-styles-image-prompts/
+https://www.artvy.ai/styles Browsable AI art style / modifier library across categories; pointer Research/topics/ai-art-styles-image-prompts/
+https://gist.github.com/ozh/8143e5978a7bd0d85b725c9dc34a2451 Curated GitHub gist of DALL·E prompt/style examples plus links to further free resources; pointer Research/topics/ai-art-styles-image-prompts/
+https://travisnicholson.medium.com/the-complete-guide-to-ai-art-styles-100-prompt-ideas-62eb3e93cff7 ~100 free example style prompts in 10 categories; full 400+ collection behind a Gumroad paywall; pointer Research/topics/ai-art-styles-image-prompts/
+https://learnprompting.org/blog/guide-openai-4o-image-generation GPT-4o image-generation guide with 12 prompt examples and templates (infographics, illustration, UI, photorealism); pointer Research/topics/ai-art-styles-image-prompts/

@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>URL launcher</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f4efe6;
+      --bg-2: #ebe4d8;
+      --fg: #1c1915;
+      --muted: #6b645a;
+      --line: #d4cbbd;
+      --accent: #1e4d7b;
+      --accent-soft: color-mix(in srgb, var(--accent) 12%, var(--bg));
+      --badge-s: #1e4d7b;
+      --badge-k: #7a4a12;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #161411;
+        --bg-2: #1f1b17;
+        --fg: #efe8dc;
+        --muted: #a3988a;
+        --line: #3a342c;
+        --accent: #8cb4d9;
+        --badge-s: #8cb4d9;
+        --badge-k: #e0b07a;
+      }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      min-height: 100vh;
+      font: 16px/1.45 ui-sans-serif, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+    }
+    a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    .top {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: color-mix(in srgb, var(--bg) 92%, transparent);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+    }
+    .top-inner {
+      max-width: 76rem;
+      margin: 0 auto;
+      padding: 0.85rem 1rem 0.95rem;
+    }
+    .brand {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.5rem 1rem;
+      margin-bottom: 0.7rem;
+    }
+    h1 {
+      font-family: "Iowan Old Style", Palatino, Palatino Linotype, "Book Antiqua", Georgia, serif;
+      font-size: 1.55rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin: 0;
+    }
+    .meta { color: var(--muted); font-size: 0.88rem; margin: 0; }
+    .controls {
+      display: grid;
+      gap: 0.45rem;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 40rem) {
+      .controls {
+        grid-template-columns: 1fr 8.5rem 8.5rem auto;
+      }
+      .controls .q { grid-column: 1 / -1; }
+      .controls .topic-wrap { grid-column: 1 / -1; }
+    }
+    @media (min-width: 56rem) {
+      .controls {
+        grid-template-columns: 1fr 8.5rem 8.5rem auto;
+      }
+      .controls .q { grid-column: auto; }
+      .topic-wrap { display: none; }
+    }
+    input, select, .clear {
+      width: 100%;
+      padding: 0.48rem 0.65rem;
+      font: inherit;
+      color: inherit;
+      background: var(--bg-2);
+      border: 1px solid var(--line);
+      border-radius: 7px;
+    }
+    .clear {
+      width: auto;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .clear:hover { border-color: var(--accent); color: var(--accent); }
+    .shell {
+      max-width: 76rem;
+      margin: 0 auto;
+      padding: 0.85rem 1rem 3rem;
+      display: grid;
+      gap: 1.25rem;
+    }
+    @media (min-width: 56rem) {
+      .shell { grid-template-columns: 16rem minmax(0, 1fr); }
+    }
+    .rail {
+      display: none;
+    }
+    @media (min-width: 56rem) {
+      .rail {
+        display: block;
+        position: sticky;
+        top: 7.4rem;
+        align-self: start;
+        max-height: calc(100vh - 8rem);
+        overflow: auto;
+        padding-right: 0.4rem;
+      }
+    }
+    .rail h2 {
+      font-size: 0.72rem;
+      font-weight: 650;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 0 0 0.4rem;
+    }
+    .rail button {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.6rem;
+      width: 100%;
+      margin: 0;
+      padding: 0.28rem 0.45rem;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      font-size: 0.88rem;
+      text-align: left;
+      cursor: pointer;
+    }
+    .rail button[aria-current="true"] {
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .rail button.is-empty { color: var(--muted); }
+    .rail .n { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.8rem; }
+    .results { min-width: 0; }
+    .empty { color: var(--muted); padding: 1.2rem 0; margin: 0; }
+    .group { margin: 0 0 1.15rem; }
+    .group h2 {
+      font-family: "Iowan Old Style", Palatino, Palatino Linotype, "Book Antiqua", Georgia, serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin: 0 0 0.12rem;
+    }
+    .group .count { color: var(--muted); font-size: 0.75rem; font-weight: 400; margin: 0 0 0.4rem; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(8.75rem, 1fr));
+      gap: 0.35rem;
+    }
+    .tile {
+      display: block;
+      min-width: 0;
+      padding: 0.32rem 0.45rem 0.32rem 0.5rem;
+      border: 1px solid var(--line);
+      border-left-width: 2px;
+      border-radius: 6px;
+      background: var(--bg-2);
+      color: inherit;
+      font: 600 0.78rem/1.25 ui-sans-serif, system-ui, sans-serif;
+      text-align: left;
+      text-decoration: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+    }
+    .tile.S { border-left-color: var(--badge-s); }
+    .tile.K { border-left-color: var(--badge-k); }
+    .tile:hover, .tile:focus-visible {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .tip {
+      position: fixed;
+      z-index: 20;
+      max-width: min(22rem, calc(100vw - 1.5rem));
+      padding: 0.65rem 0.75rem 0.7rem;
+      background: var(--bg);
+      color: var(--fg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 10px 28px color-mix(in srgb, var(--fg) 16%, transparent);
+      font-size: 0.84rem;
+      line-height: 1.4;
+    }
+    .tip[hidden] { display: none; }
+    .tip-blurb { margin: 0 0 0.35rem; }
+    .tip-meta { color: var(--muted); font-size: 0.75rem; margin: 0 0 0.45rem; word-break: break-all; }
+    .copy {
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.75rem;
+      padding: 0.18rem 0.5rem;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      background: var(--bg-2);
+      color: var(--muted);
+    }
+    .copy:hover, .copy.is-done { color: var(--accent); border-color: var(--accent); }
+    .menu {
+      position: fixed;
+      z-index: 30;
+      min-width: 8.75rem;
+      padding: 0.22rem;
+      background: var(--bg);
+      color: var(--fg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 10px 28px color-mix(in srgb, var(--fg) 16%, transparent);
+    }
+    .menu[hidden] { display: none; }
+    .menu button {
+      display: block;
+      width: 100%;
+      margin: 0;
+      padding: 0.38rem 0.55rem;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: inherit;
+      font: 600 0.82rem/1.25 ui-sans-serif, system-ui, sans-serif;
+      text-align: left;
+      cursor: pointer;
+    }
+    .menu button:hover, .menu button:focus-visible {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+    .err { color: #9b1c1c; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <div class="brand">
+        <h1>URL launcher</h1>
+        <p class="meta" id="meta">Loading…</p>
+      </div>
+      <div class="controls">
+        <input class="q" id="q" type="search" placeholder="Search URL, host, topic, or blurb  ( / )" autocomplete="off">
+        <div class="topic-wrap">
+          <select id="topic" aria-label="Topic"><option value="">All topics</option></select>
+        </div>
+        <select id="status" aria-label="Status">
+          <option value="">All statuses</option>
+          <option value="S">S — searched</option>
+          <option value="K">K — claimed</option>
+          <option value="unmarked">Unmarked</option>
+        </select>
+        <select id="kind" aria-label="Kind">
+          <option value="">All kinds</option>
+          <option value="hunt_extract">Topic extract</option>
+          <option value="drop">Drop</option>
+        </select>
+        <button type="button" class="clear" id="clear">Clear</button>
+      </div>
+    </div>
+  </header>
+  <div class="shell">
+    <nav class="rail" id="rail" aria-label="Topics"></nav>
+    <div class="results">
+      <p class="empty" id="empty" hidden>No matches.</p>
+      <div id="list"></div>
+    </div>
+  </div>
+  <div class="tip" id="tip" hidden>
+    <p class="tip-blurb" id="tip-blurb"></p>
+    <p class="tip-meta" id="tip-meta"></p>
+    <button type="button" class="copy" id="tip-copy">Copy</button>
+  </div>
+  <div class="menu" id="menu" hidden>
+    <button type="button" id="menu-copy">Copy URL</button>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let data = { built: "", mentions: [] };
+    let filters = { q: "", topic: "", status: "", kind: "" };
+    let railBuilt = false;
+
+    function filterKey(f) {
+      return [f.q, f.topic, f.status, f.kind].join("\0");
+    }
+    function parseHash() {
+      let raw = location.hash.replace(/^#/, "");
+      if (raw.charAt(0) === "?") raw = raw.slice(1);
+      const h = new URLSearchParams(raw);
+      return {
+        q: h.get("q") || "",
+        topic: h.get("topic") || "",
+        status: h.get("status") || "",
+        kind: h.get("kind") || ""
+      };
+    }
+    function writeHash() {
+      const p = new URLSearchParams();
+      if (filters.q) p.set("q", filters.q);
+      if (filters.topic) p.set("topic", filters.topic);
+      if (filters.status) p.set("status", filters.status);
+      if (filters.kind) p.set("kind", filters.kind);
+      const next = p.toString();
+      const base = location.pathname + location.search;
+      history.replaceState(null, "", next ? base + "#" + next : base);
+    }
+    function applyFiltersToDom() {
+      $("q").value = filters.q;
+      $("topic").value = filters.topic;
+      if (filters.topic && $("topic").value !== filters.topic) {
+        $("topic").value = "";
+      }
+      $("status").value = filters.status;
+      if (filters.status && $("status").value !== filters.status) {
+        $("status").value = "";
+      }
+      $("kind").value = filters.kind;
+      if (filters.kind && $("kind").value !== filters.kind) {
+        $("kind").value = "";
+      }
+    }
+    function str(v) {
+      return v == null ? "" : String(v);
+    }
+    function hay(m) {
+      return [m.url, m.host, m.topic, m.topic_slug, m.blurb, m.source]
+        .map(str)
+        .join(" ")
+        .toLowerCase();
+    }
+    function isUnmarked(s) {
+      return s == null || s === "";
+    }
+    function filtered() {
+      const q = filters.q.toLowerCase();
+      const topic = filters.topic;
+      const status = filters.status;
+      const kind = filters.kind;
+      return data.mentions.filter((m) => {
+        if (q && !hay(m).includes(q)) return false;
+        if (topic && m.topic_slug !== topic) return false;
+        if (kind && m.kind !== kind) return false;
+        if (status === "unmarked" && !isUnmarked(m.status)) return false;
+        if (status && status !== "unmarked" && m.status !== status) return false;
+        return true;
+      });
+    }
+    function safeHref(u) {
+      try {
+        const x = new URL(u);
+        if (x.protocol === "http:" || x.protocol === "https:") return u;
+      } catch (err) {}
+      return "";
+    }
+    function siteName(m) {
+      const b = str(m.blurb).trim();
+      const cut = b.split(/\s+[—–-]\s+/)[0].trim();
+      if (cut.length >= 2 && cut.length <= 32 && !/^https?:/i.test(cut)) return cut;
+      return str(m.host).replace(/^www\./, "") || str(m.url);
+    }
+    function statusLabel(s) {
+      if (s === "S") return "S — searched";
+      if (s === "K") return "K — claimed";
+      return "unmarked";
+    }
+    function tileEl(m) {
+      const href = safeHref(m.url);
+      const el = href ? document.createElement("a") : document.createElement("span");
+      el.className = "tile" + (m.status === "S" || m.status === "K" ? " " + m.status : "");
+      el.textContent = siteName(m);
+      const blurb = str(m.blurb) || str(m.url);
+      el.title = blurb;
+      el.dataset.blurb = blurb;
+      el.dataset.url = href;
+      el.dataset.status = m.status === "S" || m.status === "K" ? m.status : "unmarked";
+      if (href) {
+        el.href = href;
+        el.target = "_blank";
+        el.rel = "noopener noreferrer";
+      }
+      return el;
+    }
+    function copyPlainUrl(url, onDone) {
+      if (!url) return;
+      const fail = () => window.prompt("Copy URL", url);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(onDone).catch(fail);
+      } else {
+        fail();
+      }
+    }
+    let hideTip = function () {};
+    let hideMenu = function () {};
+    function bindTip() {
+      const tip = $("tip");
+      const blurbEl = $("tip-blurb");
+      const metaEl = $("tip-meta");
+      const copy = $("tip-copy");
+      let currentUrl = "";
+      let hideTimer = 0;
+      function hide() {
+        window.clearTimeout(hideTimer);
+        tip.hidden = true;
+        currentUrl = "";
+        copy.textContent = "Copy";
+        copy.classList.remove("is-done");
+      }
+      hideTip = hide;
+      function show(el) {
+        window.clearTimeout(hideTimer);
+        currentUrl = el.dataset.url || "";
+        blurbEl.textContent = el.dataset.blurb || "";
+        metaEl.textContent = statusLabel(el.dataset.status) + (currentUrl ? " · " + currentUrl : "");
+        copy.hidden = !currentUrl;
+        copy.textContent = "Copy";
+        copy.classList.remove("is-done");
+        tip.hidden = false;
+        const r = el.getBoundingClientRect();
+        const tw = tip.offsetWidth;
+        const th = tip.offsetHeight;
+        let left = r.left;
+        if (left + tw > window.innerWidth - 8) left = window.innerWidth - tw - 8;
+        if (left < 8) left = 8;
+        let top = r.bottom + 6;
+        if (top + th > window.innerHeight - 8) top = Math.max(8, r.top - th - 6);
+        tip.style.left = left + "px";
+        tip.style.top = top + "px";
+      }
+      function scheduleHide() {
+        window.clearTimeout(hideTimer);
+        hideTimer = window.setTimeout(() => {
+          if (tip.matches(":hover")) return;
+          const active = document.activeElement;
+          if (active && active.classList && active.classList.contains("tile")) return;
+          hide();
+        }, 80);
+      }
+      $("list").addEventListener("pointerover", (ev) => {
+        const el = ev.target.closest(".tile");
+        if (!el || !$("list").contains(el)) return;
+        show(el);
+      });
+      $("list").addEventListener("pointerleave", scheduleHide);
+      $("list").addEventListener("focusin", (ev) => {
+        const el = ev.target.closest(".tile");
+        if (el) show(el);
+      });
+      $("list").addEventListener("focusout", scheduleHide);
+      tip.addEventListener("pointerenter", () => window.clearTimeout(hideTimer));
+      tip.addEventListener("pointerleave", scheduleHide);
+      copy.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (!currentUrl) return;
+        copyPlainUrl(currentUrl, () => {
+          copy.textContent = "Copied";
+          copy.classList.add("is-done");
+        });
+      });
+    }
+    function bindMenu() {
+      const menu = $("menu");
+      const item = $("menu-copy");
+      let currentUrl = "";
+      function hide() {
+        menu.hidden = true;
+        currentUrl = "";
+        item.textContent = "Copy URL";
+      }
+      hideMenu = hide;
+      function show(x, y, url) {
+        hideTip();
+        currentUrl = url;
+        item.textContent = "Copy URL";
+        menu.hidden = false;
+        menu.style.left = x + "px";
+        menu.style.top = y + "px";
+        const r = menu.getBoundingClientRect();
+        let left = x;
+        let top = y;
+        if (left + r.width > window.innerWidth - 8) left = window.innerWidth - r.width - 8;
+        if (top + r.height > window.innerHeight - 8) top = window.innerHeight - r.height - 8;
+        if (left < 8) left = 8;
+        if (top < 8) top = 8;
+        menu.style.left = left + "px";
+        menu.style.top = top + "px";
+      }
+      $("list").addEventListener("contextmenu", (ev) => {
+        const el = ev.target.closest(".tile");
+        if (!el || !$("list").contains(el)) return;
+        const url = el.dataset.url || "";
+        if (!url) return;
+        ev.preventDefault();
+        show(ev.clientX, ev.clientY, url);
+      });
+      item.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (!currentUrl) return;
+        copyPlainUrl(currentUrl, () => {
+          item.textContent = "Copied";
+          window.setTimeout(hide, 450);
+        });
+      });
+      document.addEventListener("pointerdown", (ev) => {
+        if (menu.hidden) return;
+        if (menu.contains(ev.target)) return;
+        hide();
+      });
+      window.addEventListener("scroll", hide, true);
+    }
+    function topicCatalog() {
+      const map = new Map();
+      for (const m of data.mentions) {
+        if (!m.topic_slug) continue;
+        if (!map.has(m.topic_slug)) {
+          map.set(m.topic_slug, { slug: m.topic_slug, topic: m.topic || m.topic_slug, n: 0 });
+        }
+        map.get(m.topic_slug).n += 1;
+      }
+      return [...map.values()].sort((a, b) => a.topic.localeCompare(b.topic));
+    }
+    function ensureRail() {
+      if (railBuilt) return;
+      const rail = $("rail");
+      rail.replaceChildren();
+      const h = document.createElement("h2");
+      h.textContent = "Topics";
+      rail.appendChild(h);
+      const all = document.createElement("button");
+      all.type = "button";
+      all.dataset.slug = "";
+      const allLabel = document.createElement("span");
+      allLabel.textContent = "All topics";
+      const allN = document.createElement("span");
+      allN.className = "n";
+      all.append(allLabel, allN);
+      rail.appendChild(all);
+      for (const t of topicCatalog()) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.dataset.slug = t.slug;
+        const label = document.createElement("span");
+        label.textContent = t.topic;
+        const n = document.createElement("span");
+        n.className = "n";
+        b.append(label, n);
+        rail.appendChild(b);
+      }
+      rail.addEventListener("click", (ev) => {
+        const b = ev.target.closest("button[data-slug]");
+        if (!b) return;
+        const next = { q: filters.q, topic: b.dataset.slug, status: filters.status, kind: filters.kind };
+        if (filterKey(next) === filterKey(filters)) return;
+        filters = next;
+        applyFiltersToDom();
+        writeHash();
+        render();
+      });
+      railBuilt = true;
+    }
+    function groupsOf(rows) {
+      if (filters.topic) return [{ heading: null, rows }];
+      const map = new Map();
+      for (const m of rows) {
+        const key = m.topic_slug || "_none";
+        if (!map.has(key)) {
+          map.set(key, { heading: m.topic || "(no topic)", rows: [] });
+        }
+        map.get(key).rows.push(m);
+      }
+      return [...map.values()].sort((a, b) => a.heading.localeCompare(b.heading));
+    }
+    function render() {
+      const rows = filtered();
+      const topics = new Set(data.mentions.map((m) => m.topic_slug).filter(Boolean));
+      $("meta").textContent =
+        rows.length + " of " + data.mentions.length + " links · " +
+        topics.size + " topics · built " + (data.built || "?");
+      ensureRail();
+      const catalogBySlug = new Map();
+      for (const m of data.mentions) {
+        if (!m.topic_slug) continue;
+        catalogBySlug.set(m.topic_slug, (catalogBySlug.get(m.topic_slug) || 0) + 1);
+      }
+      const active = filters.topic;
+      $("rail").querySelectorAll("button[data-slug]").forEach((b) => {
+        const slug = b.dataset.slug;
+        const n = slug ? (catalogBySlug.get(slug) || 0) : data.mentions.length;
+        const countEl = b.querySelector(".n");
+        if (countEl) countEl.textContent = String(n);
+        b.setAttribute("aria-current", slug === active ? "true" : "false");
+        b.classList.toggle("is-empty", n === 0);
+      });
+      const empty = $("empty");
+      const list = $("list");
+      hideTip();
+      hideMenu();
+      list.replaceChildren();
+      if (!rows.length) {
+        empty.hidden = false;
+        return;
+      }
+      empty.hidden = true;
+      const frag = document.createDocumentFragment();
+      for (const g of groupsOf(rows)) {
+        const wrap = document.createElement("section");
+        wrap.className = "group";
+        if (g.heading) {
+          const h2 = document.createElement("h2");
+          h2.textContent = g.heading;
+          const c = document.createElement("p");
+          c.className = "count";
+          c.textContent = g.rows.length + (g.rows.length === 1 ? " link" : " links");
+          wrap.append(h2, c);
+        }
+        const grid = document.createElement("div");
+        grid.className = "grid";
+        for (const m of g.rows) grid.appendChild(tileEl(m));
+        wrap.appendChild(grid);
+        frag.appendChild(wrap);
+      }
+      list.appendChild(frag);
+    }
+    function applyHash() {
+      filters = parseHash();
+      applyFiltersToDom();
+      render();
+    }
+    function clearAll() {
+      filters = { q: "", topic: "", status: "", kind: "" };
+      applyFiltersToDom();
+      writeHash();
+      render();
+    }
+    function onControl(ev) {
+      const id = ev && ev.target && ev.target.id;
+      const next = {
+        q: filters.q,
+        topic: filters.topic,
+        status: filters.status,
+        kind: filters.kind
+      };
+      if (!id || id === "q") next.q = $("q").value.trim();
+      if (!id || id === "topic") next.topic = $("topic").value;
+      if (!id || id === "status") next.status = $("status").value;
+      if (!id || id === "kind") next.kind = $("kind").value;
+      if (filterKey(next) === filterKey(filters)) return;
+      filters = next;
+      writeHash();
+      render();
+    }
+
+    fetch(new URL("urls.json", document.baseURI))
+      .then((r) => {
+        if (!r.ok) throw new Error("urls.json " + r.status);
+        return r.json();
+      })
+      .then((j) => {
+        if (!j || !Array.isArray(j.mentions)) {
+          throw new Error("urls.json missing mentions array");
+        }
+        data = { built: j.built || "", mentions: j.mentions };
+        const sel = $("topic");
+        for (const t of topicCatalog()) {
+          const opt = document.createElement("option");
+          opt.value = t.slug;
+          opt.textContent = t.topic;
+          sel.appendChild(opt);
+        }
+        ["q", "topic", "status", "kind"].forEach((id) => {
+          $(id).addEventListener("input", onControl);
+          $(id).addEventListener("change", onControl);
+        });
+        $("clear").addEventListener("click", clearAll);
+        window.addEventListener("hashchange", applyHash);
+        bindTip();
+        bindMenu();
+        document.addEventListener("keydown", (e) => {
+          const tag = (document.activeElement && document.activeElement.tagName) || "";
+          const typing = tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA";
+          if (e.key === "/" && !typing && !e.metaKey && !e.ctrlKey && !e.altKey) {
+            e.preventDefault();
+            $("q").focus();
+            return;
+          }
+          if (e.key !== "Escape") return;
+          if (!$("tip").hidden) {
+            hideTip();
+            return;
+          }
+          if (!$("menu").hidden) {
+            hideMenu();
+            return;
+          }
+          if (document.activeElement === $("q")) {
+            if (filters.q || $("q").value) {
+              filters = { q: "", topic: filters.topic, status: filters.status, kind: filters.kind };
+              applyFiltersToDom();
+              writeHash();
+              render();
+            }
+            return;
+          }
+          clearAll();
+        });
+        applyHash();
+      })
+      .catch((err) => {
+        const span = document.createElement("span");
+        span.className = "err";
+        span.textContent = "Could not load urls.json. Serve this folder over HTTP (not file://).";
+        $("meta").replaceChildren(span);
+        console.error(err);
+      });
+  </script>
+</body>
+</html>
